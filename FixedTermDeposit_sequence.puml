@@ -1,0 +1,26 @@
+@startuml
+autonumber
+title Secuencia: FixedTermDeposit (reactivo)
+' Descripción: Crear plazo fijo (depósito inicial) y registrar movimiento inicial.
+
+participant Customer
+participant AccountService
+participant CustomerService
+participant DB as Database
+participant TransactionService
+
+Customer ->> AccountService : createFixedTerm(request) : Mono<FixedTermResult>
+AccountService ->> CustomerService : validateEligibility(customerId, fixedTermParams) : Mono<EligibilityResult>
+CustomerService -->> AccountService : EligibilityResult{eligible:true}
+
+alt elegible
+  AccountService ->> Database : saveFixedTerm(fixedTermDto) : Mono<FixedTerm>
+  Database -->> AccountService : FixedTerm{id, maturityDate}
+  AccountService ->> TransactionService : createMovement(initialDepositMovement) : Mono<Movement>
+  TransactionService -->> AccountService : Movement{id, amount}
+  AccountService -->> Customer : FixedTermResult{success, fixedTermId}
+else no elegible
+  AccountService -->> Customer : error(EligibilityFailed)
+end
+@enduml
+

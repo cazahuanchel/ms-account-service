@@ -1,0 +1,22 @@
+@startuml
+autonumber
+title Secuencia: GetBalance (reactivo)
+' Descripción: Consulta de saldo con verificación de acceso en CustomerService.
+
+participant Customer
+participant AccountService
+participant CustomerService
+participant DB as Database
+
+Customer ->> AccountService : getBalance(accountId) : Mono<BalanceDto>
+AccountService ->> CustomerService : verifyAccess(customerId, accountId) : Mono<AccessResult>
+CustomerService -->> AccountService : AccessResult{allowed:true}
+
+alt accesso permitido
+  AccountService ->> Database : findBalanceByAccountId(accountId) : Mono<Balance>
+  Database -->> AccountService : Balance{available, ledger}
+  AccountService -->> Customer : BalanceDto{available, currency}
+else denegado
+  AccountService -->> Customer : error(AccessDenied)
+end
+@enduml

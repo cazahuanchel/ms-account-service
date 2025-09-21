@@ -1,0 +1,20 @@
+@startuml
+autonumber
+title Secuencia: Deposit (reactivo)
+' Descripción: Depósito sobre cuenta; registra movimiento en TransactionService y actualiza balance.
+
+participant Customer
+participant AccountService
+participant TransactionService
+participant DB as Database
+
+Customer ->> AccountService : deposit(request) : Mono<DepositResult>
+AccountService ->> TransactionService : createMovement(depositMovement) : Mono<Movement>
+TransactionService -->> AccountService : Movement{id, amount, timestamp} : Mono<Movement>
+
+activate AccountService
+AccountService ->> Database : updateBalance(accountId, +amount) : Mono<Balance>
+Database -->> AccountService : Balance{available} : Mono<Balance>
+AccountService -->> Customer : DepositResult{success, newBalance} : Mono<DepositResult>
+deactivate AccountService
+@enduml

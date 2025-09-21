@@ -1,0 +1,27 @@
+@startuml
+autonumber
+participant Customer
+participant AccountService
+participant CustomerService
+database DB
+
+title Secuencia: OpenAccount (reactivo)
+' Descripción: Cliente solicita apertura; AccountService valida elegibilidad y persiste cuenta.
+
+Customer -> AccountService : POST /accounts (OpenAccount)\nrequest AccountCreateDto
+activate AccountService
+
+AccountService -> CustomerService ++ : validateEligibility(customerId)\nreturns Mono<Eligibility>
+note right: llamada reactiva (non-blocking)
+CustomerService --> AccountService -- : Mono<Eligibility>
+
+alt eligibility == OK
+  AccountService -> DB ++ : insert Account\nreturns Mono<Account>
+  DB --> AccountService -- : Mono<Account>
+  AccountService -> Customer : 201 Created\nMono<AccountDto>
+else not eligible
+  AccountService -> Customer : 400/403 (not eligible)\nMono<Error>
+end
+
+deactivate AccountService
+@enduml

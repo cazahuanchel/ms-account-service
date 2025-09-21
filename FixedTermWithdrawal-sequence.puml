@@ -1,0 +1,38 @@
+@startuml
+autonumber
+title Secuencia: FixedTermWithdrawal (reactivo)
+' Descripción: Retiro de plazo fijo con tres caminos: vencido, retiro anticipado con penalidad, retiro no permitido.
+
+participant Customer
+participant AccountService
+participant DB as Database
+participant CustomerService
+participant PolicyEngine
+participant TransactionService
+
+Customer ->> AccountService : withdrawFixedTerm(fixedTermId) : Mono<WithdrawResult>
+AccountService ->> Database : getFixedTerm(fixedTermId) : Mono<FixedTerm>
+Database -->> AccountService : FixedTerm{amount, maturityDate, status}
+
+AccountService ->> CustomerService : verifyAccess(customerId, fixedTermId) : Mono<AccessResult>
+CustomerService -->> AccountService : AccessResult{allowed:true}
+
+AccountService ->> PolicyEngine : checkMaturityAndPenalties(fixedTerm) : Mono<PolicyDecision>
+PolicyEngine -->> AccountService : PolicyDecision{maturityReached:true, earlyAllowed:false, penalty=0}
+
+alt maturityReached
+  AccountService ->> TransactionService : createMovement(withdrawMovement) : Mono<Movement>
+  TransactionService -->> AccountService : Movement{id, amount}
+  AccountService ->> Database : closeFixedTerm(fixedTermId, status=closed) : Mono<Void>
+  Database -->> AccountService : Void
+  AccountService -->> Customer : WithdrawResult{success, netAmount}
+else earlyAllowed (maturity not reached & earlyAllowed)
+  AccountService ->> TransactionService : createMovement(withdrawMovementMinusPenalty) : Mono<Movement>
+  TransactionService -->> AccountService : Movement{id, netAmount}
+  AccountService ->> Database : closeFixedTerm(fixedTermId, status=closedEarly) : Mono<Void>
+  Database -->> AccountService : Void
+  AccountService -->> Customer : WithdrawResult{success, netAmount, penaltyApplied}
+else notAllowed
+  AccountService -->> Customer : error(EarlyWithdrawalNotAllowed)
+end
+@enduml

@@ -1,0 +1,57 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+
+title Account Service - Diagrama de Casos de Uso
+' Descripción: Gestión de productos pasivos (Savings, Checking, FixedTerm). 
+' Actores: Customer, BankOperator. Use cases listados.
+
+actor Customer
+actor BankOperator as Operator
+
+usecase UC_OpenAccount as "OpenAccount"
+usecase UC_Deposit as "Deposit"
+usecase UC_Withdraw as "Withdraw"
+usecase UC_GetBalance as "GetBalance"
+usecase UC_GetMovements as "GetMovements"
+usecase UC_FixedTermDeposit as "FixedTermDeposit"
+usecase UC_FixedTermWithdrawal as "FixedTermWithdrawal"
+
+Customer -- UC_OpenAccount
+Customer -- UC_Deposit
+Customer -- UC_Withdraw
+Customer -- UC_GetBalance
+Customer -- UC_GetMovements
+Customer -- UC_FixedTermDeposit
+Customer -- UC_FixedTermWithdrawal
+
+Operator -- UC_OpenAccount
+Operator -- UC_GetBalance
+Operator -- UC_GetMovements
+Operator -- UC_Deposit
+Operator -- UC_Withdraw
+Operator -- UC_FixedTermDeposit
+Operator -- UC_FixedTermWithdrawal
+
+note right of UC_OpenAccount
+Validaciones principales:
+- Verificar elegibilidad en CustomerService.
+- Aplicar reglas por tipo de cliente (personal/empresarial).
+- Validar titulares y firma según política.
+end note
+
+note right of UC_FixedTermWithdrawal
+Política de vencimiento:
+- Retiro a vencimiento -> sin penalidad.
+- Retiro anticipado -> posible penalidad (configurable) o bloqueo.
+end note
+
+note bottom
+Reglas resumen:
+- Cliente personal: máximo 1 Savings, máximo 1 Checking, múltiples FixedTerm.
+- Cliente empresarial: no tiene Savings ni FixedTerm; puede tener múltiples Checking.
+- Savings: límite mensual de movimientos (configurable).
+- Checking: comisión de mantenimiento (atributo del producto).
+- FixedTerm: solo un retiro principal en fecha de vencimiento; inicial deposit es movimiento.
+end note
+@enduml

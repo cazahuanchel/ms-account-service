@@ -1,0 +1,36 @@
+@startuml
+title Withdraw - Secuencia (reactiva)
+' Descripción:
+' Retiro: se evalúan reglas (límites, saldo, comisiones). Se registra movimiento y actualiza DB.
+participant Customer
+participant AccountService
+participant TransactionService
+database "AccountsDB (MongoReactive)" as DB
+
+Customer -> AccountService : POST /accounts/{id}/withdraw : Mono<WithdrawRequest>
+activate AccountService
+
+AccountService -> DB : findById(accountId) : Mono<Account>
+activate DB
+DB --> AccountService : Mono<Account>
+deactivate DB
+
+AccountService -> AccountService : evaluateBusinessRules(account, amount) : Mono<RuleEvaluation>
+alt rules == OK
+  AccountService -> TransactionService : createMovement(withdrawal) : Mono<Movement>
+  activate TransactionService
+  TransactionService --> AccountService : Mono<MovementCreated>
+  deactivate TransactionService
+
+  AccountService -> DB : updateBalance(accountId, -amount +/- fees) : Mono<UpdateResult>
+  activate DB
+  DB --> AccountService : Mono<UpdateAck>
+  deactivate DB
+
+  AccountService --> Customer : Mono<WithdrawConfirmation> (200)
+else rules == NOK
+  AccountService --> Customer : Mono<Error> (422, reason)
+end
+
+deactivate AccountService
+@enduml
